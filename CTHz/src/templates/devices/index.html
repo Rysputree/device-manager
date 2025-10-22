@@ -1,0 +1,542 @@
+{% extends "base.html" %}
+
+{% block title %}Device Management - CT3D System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .device-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 24px;
+    }
+    
+    .device-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+    
+    .device-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .device-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+    }
+    
+    .device-info h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+    
+    .device-location {
+        color: #718096;
+        font-size: 14px;
+    }
+    
+    .device-metrics {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .metric-item {
+        text-align: center;
+    }
+    
+    .metric-label {
+        font-size: 12px;
+        color: #718096;
+        margin-bottom: 4px;
+    }
+    
+    .metric-value {
+        font-size: 16px;
+        font-weight: 600;
+    }
+    
+    .health-score {
+        margin-bottom: 16px;
+    }
+    
+    .health-label {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s;
+    }
+    
+    .progress-fill.excellent {
+        background: #48bb78;
+    }
+    
+    .progress-fill.good {
+        background: #68d391;
+    }
+    
+    .progress-fill.warning {
+        background: #f6ad55;
+    }
+    
+    .progress-fill.critical {
+        background: #e53e3e;
+    }
+    
+    .device-stats {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    
+    .stat-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+    }
+    
+    .device-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+    
+    .action-btn {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+    
+    .action-btn-primary {
+        background: #3182ce;
+        color: white;
+    }
+    
+    .action-btn-primary:hover {
+        background: #2c5aa0;
+    }
+    
+    .action-btn-secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .action-btn-secondary:hover {
+        background: #edf2f7;
+    }
+    
+    .loading {
+        text-align: center;
+        padding: 40px;
+        color: #718096;
+    }
+    
+    .error-message {
+        background: #fed7d7;
+        color: #c53030;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 24px;
+    }
+    
+    .device-count {
+        color: #718096;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Device Management</h1>
+    <p>Monitor and configure your CT3D devices</p>
+    <div class="page-actions">
+        <button class="btn btn-secondary" onclick="startLiveSync()">
+            🔄 Start Live Sync
+        </button>
+        <button class="btn btn-primary" onclick="addDevice()">
+            ➕ Add Device
+        </button>
+    </div>
+</div>
+
+<div class="filters">
+    <input type="text" class="search-input" placeholder="Search devices by name, group, or ID..." id="search-input">
+    
+    <div class="filter-group">
+        <label class="filter-label">Group</label>
+        <select class="filter-input" id="group-filter">
+            <option value="">All Groups</option>
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label class="filter-label">Status</label>
+        <select class="filter-input" id="status-filter">
+            <option value="">All Status</option>
+            <option value="online">Online</option>
+            <option value="warning">Warning</option>
+            <option value="offline">Offline</option>
+        </select>
+    </div>
+</div>
+
+<div class="device-count" id="device-count">Loading devices...</div>
+
+<div id="error-container"></div>
+
+<div class="device-grid" id="device-grid">
+    <div class="loading">Loading devices...</div>
+</div>
+<!-- Info Modal -->
+<div id="device-info-modal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-title">Device Info</span>
+            <button class="modal-close" onclick="closeDeviceInfoModal()">×</button>
+        </div>
+        <pre id="device-info-content" style="max-height:60vh; overflow:auto; background:#f8fafc; padding:12px; border-radius:8px;"></pre>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeDeviceInfoModal()">Close</button>
+        </div>
+    </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let devices = [];
+let filteredDevices = [];
+
+async function loadDevices() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const response = await fetch('/api/cluster/devices?live=true', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                showToast('Your session has expired. Please login again.', 'error');
+                window.location.href = '/login';
+                return;
+            }
+            if (contentType.includes('application/json')) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || `HTTP ${response.status}: ${response.statusText}`);
+            } else {
+                const text = await response.text().catch(() => '');
+                // If we received HTML (likely a redirect page), bounce to login
+                if (text.includes('<html') || text.includes('<!DOCTYPE html')) {
+                    showToast('Redirected to login. Please authenticate.', 'error');
+                    window.location.href = '/login';
+                    return;
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        }
+
+        if (!contentType.includes('application/json')) {
+            // Prevent "Unexpected token '<'" when server returns HTML
+            const text = await response.text().catch(() => '');
+            if (text.includes('<html') || text.includes('<!DOCTYPE html')) {
+                showToast('Redirected to login. Please authenticate.', 'error');
+                window.location.href = '/login';
+                return;
+            }
+            throw new Error('Unexpected non-JSON response from server.');
+        }
+
+        const data = await response.json();
+        // data.devices contains cluster devices: { device_id, ip_address, status, status_color, last_seen, display_name, role }
+        devices = (data.devices || []).map(d => ({
+            id: d.device_id,
+            name: d.display_name || d.device_id,
+            location: d.ip_address || '-',
+            status: d.status || 'offline',
+            status_color: d.status_color || 'red',
+            role: d.role || 'member',
+            model: '-',
+            station: null,
+            health_score: d.status === 'online' ? 95 : (d.status === 'warning' ? 70 : 0),
+            alerts: 0,
+            storage_used: 0,
+            fps: d.status === 'online' ? 25 : 0,
+            last_seen: d.last_seen || new Date().toISOString(),
+        }));
+        filteredDevices = devices;
+        
+        await loadGroups();
+        renderDevices();
+        updateDeviceCount();
+        
+    } catch (error) {
+        console.error('Error loading devices:', error);
+        showError('Failed to load devices: ' + error.message);
+    }
+}
+
+async function loadGroups() {
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch('/api/devices/groups/list', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const groupFilter = document.getElementById('group-filter');
+            groupFilter.innerHTML = '<option value="">All Groups</option>';
+            
+            data.groups.forEach(group => {
+                if (group !== 'All Groups') {
+                    const option = document.createElement('option');
+                    option.value = group;
+                    option.textContent = group;
+                    groupFilter.appendChild(option);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading groups:', error);
+    }
+}
+
+function renderDevices() {
+    const grid = document.getElementById('device-grid');
+    
+    if (filteredDevices.length === 0) {
+        grid.innerHTML = '<div class="loading">No devices found</div>';
+        return;
+    }
+    
+    grid.innerHTML = filteredDevices.map(device => `
+        <div class="device-card">
+            <div class="device-header">
+                <div class="device-info">
+                    <h3>${device.name}</h3>
+                    <div class="device-location">${device.location}</div>
+                </div>
+                <span class="status-badge" style="padding:4px 8px;border-radius:12px;color:#fff;background:${device.status_color === 'green' ? '#22c55e' : (device.status_color === 'yellow' ? '#f59e0b' : '#ef4444')}">${device.status}</span>
+            </div>
+            
+            <div class="device-metrics">
+                <div class="metric-item">
+                    <div class="metric-label">Device ID</div>
+                    <div class="metric-value">${device.id}</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Last Seen</div>
+                    <div class="metric-value">${formatTimeAgo(device.last_seen)}</div>
+                </div>
+            </div>
+            
+            <div class="health-score">
+                <div class="health-label">
+                    <span>Health Score</span>
+                    <span>${device.health_score}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill ${getHealthClass(device.health_score)}" style="width: ${device.health_score}%"></div>
+                </div>
+            </div>
+            
+            <div class="device-stats">
+                <div class="stat-group">
+                    🚨 <span>${device.alerts} Alerts</span>
+                </div>
+                <div class="stat-group">
+                    💾 <span>${device.storage_used}%</span>
+                </div>
+                <div class="stat-group">
+                    📹 <span>${device.fps} FPS</span>
+                </div>
+            </div>
+            
+            <div class="device-actions">
+                <button class="action-btn action-btn-secondary" onclick="viewDevice('${device.id}')">
+                    👁️
+                </button>
+                <button class="action-btn action-btn-secondary" onclick="configDevice('${device.id}')">
+                    ⚙️
+                </button>
+                <button class="action-btn action-btn-primary" onclick="controlDevice('${device.id}')" ${device.status === 'offline' ? 'disabled' : ''}>
+                    ${device.status === 'offline' ? '⏸️' : '▶️'}
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateDeviceCount() {
+    const count = document.getElementById('device-count');
+    count.textContent = `Showing ${filteredDevices.length} of ${devices.length} devices`;
+}
+
+function filterDevices() {
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    const groupFilter = document.getElementById('group-filter').value;
+    const statusFilter = document.getElementById('status-filter').value;
+    
+    filteredDevices = devices.filter(device => {
+        const matchesSearch = !searchTerm || 
+            device.name.toLowerCase().includes(searchTerm) ||
+            device.id.toLowerCase().includes(searchTerm) ||
+            device.group.toLowerCase().includes(searchTerm);
+            
+        const matchesGroup = !groupFilter || device.group === groupFilter;
+        const matchesStatus = !statusFilter || device.status === statusFilter;
+        
+        return matchesSearch && matchesGroup && matchesStatus;
+    });
+    
+    renderDevices();
+    updateDeviceCount();
+}
+
+function getHealthClass(score) {
+    if (score >= 90) return 'excellent';
+    if (score >= 80) return 'good';
+    if (score >= 60) return 'warning';
+    return 'critical';
+}
+
+function formatTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
+    return `${Math.floor(diffMins / 1440)} days ago`;
+}
+
+function showError(message) {
+    const container = document.getElementById('error-container');
+    container.innerHTML = `<div class="error-message">${message}</div>`;
+}
+
+function startLiveSync() {
+    // Simulate live sync
+    const btn = event.target;
+    btn.textContent = '🔄 Syncing...';
+    btn.disabled = true;
+    
+    setTimeout(() => {
+        btn.textContent = '🔄 Start Live Sync';
+        btn.disabled = false;
+        loadDevices(); // Refresh data
+    }, 2000);
+}
+
+function addDevice() {
+    showToast('Add Device modal coming soon', 'info');
+}
+
+async function viewDevice(deviceId) {
+    try {
+        const dev = devices.find(d => d.id === deviceId);
+        if (!dev) { showToast('Device not found', 'error'); return; }
+        let info = {};
+        // Always go through manager proxy to reuse JWT and avoid CORS
+        const token = localStorage.getItem('access_token');
+        const r = await fetch(`/api/cluster/devices/${deviceId}/info`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        info = await r.json();
+        try { delete info.role; } catch(_) {}
+        try { delete info.node_role; } catch(_) {}
+        showDeviceInfoModal(info);
+    } catch (e) {
+        console.error('View device failed', e);
+        showToast('Failed to load device info', 'error');
+    }
+}
+
+function showDeviceInfoModal(data) {
+    const modal = document.getElementById('device-info-modal');
+    const pre = document.getElementById('device-info-content');
+    pre.textContent = JSON.stringify(data, null, 2);
+    modal.style.display = 'block';
+}
+
+function closeDeviceInfoModal() {
+    const modal = document.getElementById('device-info-modal');
+    modal.style.display = 'none';
+}
+
+function configDevice(deviceId) {
+    showToast(`Configure device: ${deviceId}`, 'info');
+}
+
+async function controlDevice(deviceId) {
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`/api/devices/${deviceId}/scan`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            showToast(result.message || 'Command sent', 'success');
+        } else {
+            throw new Error('Failed to control device');
+        }
+    } catch (error) {
+        console.error('Error controlling device:', error);
+        showToast('Failed to control device: ' + error.message, 'error');
+    }
+}
+
+// Event listeners
+document.getElementById('search-input').addEventListener('input', filterDevices);
+document.getElementById('group-filter').addEventListener('change', filterDevices);
+document.getElementById('status-filter').addEventListener('change', filterDevices);
+
+// Load devices on page load
+document.addEventListener('DOMContentLoaded', loadDevices);
+</script>
+{% endblock %}

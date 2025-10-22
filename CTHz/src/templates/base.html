@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CTHz Management System{% endblock %}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial; background: #f5f7fb; color: #111827; }
+
+        .app-layout { display: flex; min-height: 100vh; }
+        .main-content { flex: 1; margin-left: 240px; padding: 24px; }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 240px; 
+            background: #ffffff; 
+            color: #111827; 
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            inset: 0 auto 0 0; 
+            box-shadow: 1px 4px 4px 0px rgba(0,0,0,0.04);
+            border-right: 1px solid #f1f2f6;
+        }
+        
+        .sidebar-header {
+            height: 85px; 
+            background: white; 
+            border-bottom: 1px solid #f1f2f6; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            padding: 18px 20px;
+        }
+        
+        .system-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 141px;
+            height: 38px;
+        }
+        
+        .logo-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: 29px 0; 
+            overflow-y: auto; 
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px; 
+            padding: 8px; 
+            color: #111827; 
+            text-decoration: none;
+            border-radius: 4px; 
+            transition: all 0.2s;
+            cursor: pointer; 
+            width: 220px;
+            height: 41px;
+            font-family: 'Noto Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 20px;
+            letter-spacing: -0.1504px;
+        }
+        
+        .nav-item:hover {
+            background: #f8f9fa; 
+        }
+        
+        .nav-item.active {
+            background: #eceff7; 
+            color: #111827;
+        }
+        
+        .nav-icon {
+            width: 16px; 
+            height: 16px; 
+            flex-shrink: 0;
+        }
+        
+        .sidebar-footer {
+            background: white; 
+            border-top: 1px solid #f1f2f6; 
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px; 
+            padding: 0;
+            border-radius: 4px;
+        }
+        
+        .user-avatar {
+            width: 24px; 
+            height: 24px; 
+            border-radius: 50%;
+            background: #3b82f6; 
+            color: white; 
+            display: grid; 
+            place-items: center; 
+            font-weight: 600;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .user-details { 
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .user-details h4 { 
+            font-size: 14px; 
+            margin: 0 0 1px 0; 
+            color: #111827; 
+            font-family: 'Noto Sans', sans-serif;
+            font-weight: 400;
+            line-height: 20px;
+            letter-spacing: -0.1504px;
+        }
+        
+        .user-details p { 
+            font-size: 12px; 
+            color: #717182; 
+            margin: 0; 
+            font-family: 'Noto Sans', sans-serif;
+            font-weight: 400;
+            line-height: 20px;
+        }
+        
+        .user-dropdown {
+            width: 5.333px;
+            height: 5.333px;
+            transform: rotate(270deg);
+            flex-shrink: 0;
+        }
+        
+        .reset-btn { 
+            width: 100%; 
+            height: 41px;
+            background: #eceff7; 
+            color: #e7000b; 
+            border: none;
+            border-radius: 4px; 
+            cursor: pointer;
+            font-size: 14px; 
+            font-weight: 400; 
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-family: 'Noto Sans', sans-serif;
+            line-height: 20px;
+            letter-spacing: -0.1504px;
+        }
+        
+        .reset-btn:hover { 
+            background: #e0e4ed; 
+        }
+        
+        .reset-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        /* Page header */
+        .page-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px; }
+        .header-info h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+        .header-info p { color: #6b7280; font-size: 14px; }
+        .btn-add-user { padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .btn-add-user:hover { background: #2563eb; }
+
+        /* Stats cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; border: 1px solid #e5e7eb; }
+        .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .stat-label { font-size: 14px; color: #6b7280; font-weight: 500; }
+        .stat-icon { width: 24px; height: 24px; opacity: 0.6; }
+        .stat-value { font-size: 32px; font-weight: 700; color: #111827; }
+
+        /* Main card */
+        .card { background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb; }
+        .card-header { margin-bottom: 20px; }
+        .card-title { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+        .card-subtitle { font-size: 14px; color: #6b7280; }
+
+        /* Table */
+        .table-container { overflow-x: auto; }
+        .table { width: 100%; border-collapse: collapse; }
+        .table thead { background: #f8fafc; }
+        .table th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; }
+        .table td { padding: 16px; border-bottom: 1px solid #f1f5f9; }
+        .table tbody tr:hover { background: #f9fafb; }
+
+        .user-cell { display: flex; flex-direction: column; gap: 4px; }
+        .user-name { font-weight: 600; color: #111827; font-size: 14px; }
+        .user-email { font-size: 13px; color: #6b7280; }
+
+        .role-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 500; }
+        .role-owner { background: #fef3c7; color: #92400e; }
+        .role-admin { background: #dbeafe; color: #1e40af; }
+        .role-monitor { background: #e0e7ff; color: #3730a3; }
+
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-offline { background: #fee2e2; color: #991b1b; }
+
+        .actions { display: flex; gap: 8px; }
+        .icon-btn { width: 32px; height: 32px; border: none; background: transparent; cursor: pointer; border-radius: 6px; display: grid; place-items: center; transition: all 0.2s; }
+        .icon-btn:hover { background: #f3f4f6; }
+        .icon-btn svg { width: 16px; height: 16px; }
+        .icon-btn-edit { color: #3b82f6; }
+        .icon-btn-delete { color: #ef4444; }
+
+        /* Additional styles for other components */
+        .page-actions { display: flex; gap: 12px; align-items: center; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-secondary { background: #f3f4f6; color: #374151; }
+        .btn-secondary:hover { background: #e5e7eb; }
+
+        .filters { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-label { font-size: 14px; font-weight: 500; color: #374151; }
+        .filter-input, .search-input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .filter-input:focus, .search-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+        .table-wrapper { overflow-x: auto; }
+
+        /* Form styles */
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; margin-bottom: 4px; font-weight: 500; color: #374151; font-size: 14px; }
+        .form-input, .form-select { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        /* Modal styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); }
+        .modal-content { background-color: white; margin: 5% auto; padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-size: 18px; font-weight: 700; color: #111827; }
+        .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; }
+        .modal-footer { display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px; }
+
+        /* Toast Notifications */
+        .toast {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .toast-header {
+            background: #f8fafc;
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
+            font-weight: 600;
+        }
+        
+        .toast-body {
+            color: #374151;
+            font-size: 14px;
+        }
+        
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        .btn-close:hover {
+            opacity: 1;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content { margin-left: 0; }
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+            .sidebar.open { transform: translateX(0); }
+            .stats-grid { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+        }
+        </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="system-logo">
+                    <img src="{{ url_for('static', path='assests/images/logoblack.png') }}" alt="CTHz Logo" class="logo-image">
+                </div>
+            </div>
+            
+            <div class="sidebar-nav">
+                <a href="#" class="nav-item" onclick="updateActiveNav('/dashboard'); navigateWithAuth('/dashboard')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/discovery'); navigateWithAuth('/discovery')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                    </svg>
+                    Discovery & Pairing
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/devices'); navigateWithAuth('/devices')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.666.804 4.332A1 1 0 0113 21H7a1 1 0 01-.707-1.002l.123-.666H5a2 2 0 01-2-2V5zm5.5 2a.5.5 0 00-.5.5v3a.5.5 0 00.5.5h3a.5.5 0 00.5-.5v-3a.5.5 0 00-.5-.5h-3z" clip-rule="evenodd"/>
+                    </svg>
+                    Device Management
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/live-video'); navigateWithAuth('/live-video')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"/>
+                    </svg>
+                    Live Video Feed
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/policies'); navigateWithAuth('/policies')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    Policy Management
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/alerts'); navigateWithAuth('/alerts')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    Alerts & Notifications
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/configuration'); navigateWithAuth('/configuration')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                    </svg>
+                    Configuration
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/storage'); navigateWithAuth('/storage')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                    </svg>
+                    Storage Management
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/audit'); navigateWithAuth('/audit')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                    </svg>
+                    Audit Logs
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/users'); navigateWithAuth('/users')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+                    </svg>
+                    User Management
+                </a>
+                <a href="#" class="nav-item" onclick="updateActiveNav('/errors'); navigateWithAuth('/errors')">
+                    <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    Error Handling
+                </a>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">A</div>
+                    <div class="user-details">
+                        <h4 id="user-name">Admin</h4>
+                        <p id="user-email">admin@tghz.com</p>
+                    </div>
+                    <div class="user-dropdown">
+                        <svg width="5.333" height="5.333" viewBox="0 0 5.333 5.333" fill="currentColor">
+                            <path d="M0 0L5.333 0L2.667 5.333L0 0Z"/>
+                        </svg>
+                    </div>
+                </div>
+                <button class="reset-btn" onclick="resetSystem()">
+                    <svg class="reset-icon" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
+                    </svg>
+                    Reset Device
+                </button>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <script>
+        // Set active navigation on page load
+        function setActiveNav() {
+            const currentPath = window.location.pathname;
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            // Remove active class from all items
+            navItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to matching item based on updateActiveNav path
+            navItems.forEach(item => {
+                const onclick = item.getAttribute('onclick');
+                if (onclick) {
+                    // Extract path from updateActiveNav function
+                    const pathMatch = onclick.match(/updateActiveNav\('([^']+)'\)/);
+                    if (pathMatch) {
+                        const navPath = pathMatch[1];
+                        
+                        if (currentPath === navPath || (currentPath.startsWith(navPath) && navPath !== '/')) {
+                    item.classList.add('active');
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Set user info by fetching from API
+        async function setUserInfo() {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    // Fallback to localStorage if no token
+                    const userRole = localStorage.getItem('user_role') || 'Admin';
+                    const userName = localStorage.getItem('user_name') || 'Admin';
+                    const userEmail = localStorage.getItem('user_email') || 'admin@tghz.com';
+                    
+                    document.getElementById('user-name').textContent = userName;
+                    document.getElementById('user-email').textContent = userEmail;
+                    document.getElementById('user-avatar').textContent = userName.charAt(0).toUpperCase();
+                    return;
+                }
+                
+                const response = await fetch('/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    document.getElementById('user-name').textContent = userData.username;
+                    document.getElementById('user-email').textContent = userData.email || 'No email provided';
+                    document.getElementById('user-avatar').textContent = userData.username.charAt(0).toUpperCase();
+                    
+                    // Update localStorage with fresh data
+                    localStorage.setItem('user_name', userData.username);
+                    localStorage.setItem('user_email', userData.email || '');
+                } else {
+                    // Fallback to localStorage if API fails
+                    const userRole = localStorage.getItem('user_role') || 'Admin';
+                    const userName = localStorage.getItem('user_name') || 'Admin';
+                    const userEmail = localStorage.getItem('user_email') || 'admin@tghz.com';
+                    
+                    document.getElementById('user-name').textContent = userName;
+                    document.getElementById('user-email').textContent = userEmail;
+                    document.getElementById('user-avatar').textContent = userName.charAt(0).toUpperCase();
+                }
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+                // Fallback to localStorage if there's an error
+                const userRole = localStorage.getItem('user_role') || 'Admin';
+                const userName = localStorage.getItem('user_name') || 'Admin';
+                const userEmail = localStorage.getItem('user_email') || 'admin@tghz.com';
+                
+                document.getElementById('user-name').textContent = userName;
+                document.getElementById('user-email').textContent = userEmail;
+                document.getElementById('user-avatar').textContent = userName.charAt(0).toUpperCase();
+            }
+        }
+        
+        // Set cookie from query parameter (for Safari compatibility)
+        function setCookieFromQueryParam() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            if (token) {
+                // Set cookie for future requests
+                document.cookie = `access_token=${token}; path=/; max-age=86400; samesite=lax`;
+                // Clean up URL
+                const newUrl = window.location.pathname + window.location.hash;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        }
+        
+        // Navigate with authentication
+        function navigateWithAuth(path) {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                // Check if we're on Safari or if cookies aren't working
+                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                if (isSafari || document.cookie.indexOf('access_token=') === -1) {
+                    // For Safari compatibility, append token as query parameter
+                    window.location.href = `${path}?token=${token}`;
+                } else {
+                    window.location.href = path;
+                }
+            } else {
+                window.location.href = '/login';
+            }
+        }
+        
+        // Update active navigation when clicking
+        function updateActiveNav(clickedPath) {
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                    item.classList.remove('active');
+                const href = item.getAttribute('onclick');
+                if (href) {
+                    const pathMatch = href.match(/navigateWithAuth\('([^']+)'\)/);
+                    if (pathMatch && pathMatch[1] === clickedPath) {
+                        item.classList.add('active');
+                    }
+                }
+            });
+        }
+        
+        // Logout function
+        function logout() {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_role');
+            localStorage.removeItem('user_name');
+            
+            // Clear cookie
+            document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            
+                window.location.href = '/login';
+        }
+        
+        // Reset system function
+        function resetSystem() {
+            if (confirm('Are you sure you want to reset the system? This will delete all data and return to setup mode.')) {
+                const token = localStorage.getItem('access_token');
+                if (token) {
+                    fetch('/api/setup/reset', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.message) {
+                            showSuccess('System reset successfully! Redirecting to setup...');
+                            setTimeout(() => {
+                                localStorage.clear();
+                                window.location.href = '/setup';
+                            }, 2000);
+                        } else {
+                            showError('Failed to reset system: ' + (data.detail || 'Unknown error'));
+                        }
+                    })
+                    .catch(error => {
+                        showError('Failed to reset system: ' + error.message);
+                    });
+                } else {
+                    showError('No authentication token found');
+                }
+            }
+        }
+        
+        // Set active navigation on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setCookieFromQueryParam();
+            setActiveNav();
+            // Delay setUserInfo to ensure token is available
+            setTimeout(() => {
+                setUserInfo();
+            }, 100);
+        });
+        
+        // Toast notification functions
+        function showToast(title, message, type) {
+            // Create toast container if it doesn't exist
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '9999';
+                document.body.appendChild(toastContainer);
+            }
+            
+            // Create unique toast ID
+            const toastId = 'toast-' + Date.now();
+            
+            // Create toast HTML
+            const toastHtml = `
+                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header">
+                        <i class="ms-Icon ms-Icon--${type === 'success' ? 'CheckMark' : 'Error'}" style="color: ${type === 'success' ? '#10b981' : '#ef4444'}; margin-right: 8px;"></i>
+                        <strong class="me-auto">${title}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            // Add toast to container
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            // Initialize and show toast
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: 5000
+            });
+            toast.show();
+            
+            // Remove toast element after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', function() {
+                toastElement.remove();
+            });
+        }
+        
+        function showError(message) {
+            showToast('Error', message, 'danger');
+        }
+        
+        function showSuccess(message) {
+            showToast('Success', message, 'success');
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+    
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

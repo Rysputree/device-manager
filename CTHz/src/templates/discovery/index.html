@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Discovery & Pairing - CT3D System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Discovery & Pairing</h1>
+    <p>Manual device discovery using mDNS/Bonjour browse and resolve</p>
+    <div class="page-actions">
+        <button class="btn btn-primary">Start mDNS Discovery</button>
+    </div>
+</div>
+
+<div class="card">
+    <div style="padding: 24px;">
+        <!-- Manual pairing row at top -->
+        <div style="display:flex; gap:12px; align-items:center; margin-bottom:16px; flex-wrap:wrap;">
+            <div style="position:relative; flex:1 1 360px; max-width:520px;">
+                <span style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#718096;">🔌</span>
+                <input id="pair-ip" type="text" class="form-control" style="padding-left:40px;" placeholder="Enter IP address, e.g. 192.168.1.11:8000" />
+            </div>
+            <button class="btn btn-success" onclick="pairManual()">Pair Device</button>
+            <div id="pair-result" style="color:#4A5568;"></div>
+        </div>
+
+        <!-- Paired devices grid below -->
+        <div style="display:flex; align-items:center; gap:8px; margin:8px 0 12px 0;">
+            <img src="/static/icons/info.svg" alt="i" style="width:16px; height:16px; opacity:.7;" onerror="this.style.display='none'" />
+            <span style="color:#4A5568; font-size:12px;">Only pair devices that you trust and verify.</span>
+        </div>
+
+        <div id="paired-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let pairedDevices = [];
+
+async function loadPaired() {
+  try {
+    const token = localStorage.getItem('access_token');
+    const res = await fetch('/api/cluster/devices?live=true', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    pairedDevices = data.devices || [];
+    renderPaired();
+  } catch (e) {
+    console.error('Failed to load paired devices', e);
+  }
+}
+
+function renderPaired() {
+  const grid = document.getElementById('paired-grid');
+  if (!pairedDevices.length) { grid.innerHTML = '<div style="color:#718096;">No paired devices</div>'; return; }
+  grid.innerHTML = pairedDevices.map(d => {
+    const badge = d.status_color === 'green' ? '#22c55e' : (d.status_color === 'yellow' ? '#f59e0b' : '#ef4444');
+    const canUnpair = d.role !== 'manager';
+    const lastSeenText = d.last_seen ? timeAgo(new Date(d.last_seen)) : '—';
+    const model = (d.model || 'CTHz Device');
+    const serial = d.device_id || '-';
+    const ip = d.ip_address || '-';
+    return `
+      <div style="border:1px solid #e5e7eb; border-radius:12px; background:#fff; padding:16px; display:flex; flex-direction:column; gap:12px; box-shadow: 0 1px 2px rgba(16,24,40,0.06);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; font-size:16px; font-weight:700; color:#111827;">${d.display_name || serial}</h3>
+          <span style="width:10px; height:10px; border-radius:50%; background:${badge}"></span>
+        </div>
+        <div style="border:1px solid #e5e7eb; border-radius:10px; padding:10px; background:#f8fafc; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px; color:#111827;"><span>💾</span><span style="font-weight:600;">${model}</span></div>
+          <div style="display:flex; align-items:center; gap:8px; color:#111827;"><span>🕸️</span><span style="font-weight:600;">${ip}</span></div>
+          <div style="display:flex; align-items:center; gap:8px; color:#111827;"><span>⚙️</span><span style="font-weight:600;">${serial}</span></div>
+          <div style="display:flex; align-items:center; gap:8px; color:#111827;"><span>⏱️</span><span style="font-weight:600;">${lastSeenText}</span></div>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <button class="btn btn-secondary" onclick="viewPairedInfo('${d.device_id}')">Device Info</button>
+          ${canUnpair ? `<button class=\"btn btn-outline\" onclick=\"unpair('${d.device_id}')\">Unpair</button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function timeAgo(date) {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  const units = [
+    ['year', 31536000],
+    ['month', 2592000],
+    ['week', 604800],
+    ['day', 86400],
+    ['hour', 3600],
+    ['minute', 60],
+    ['second', 1],
+  ];
+  for (const [name, secs] of units) {
+    const v = Math.floor(seconds / secs);
+    if (v >= 1) return `${v} ${name}${v>1?'s':''} ago`;
+  }
+  return 'just now';
+}
+
+async function viewPairedInfo(deviceId) {
+  try {
+    const token = localStorage.getItem('access_token');
+    const r = await fetch(`/api/cluster/devices/${deviceId}/info`, { headers: { 'Authorization': `Bearer ${token}` } });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    showToast(`${data.name || data.device_id} • ${data.ip_address || '-'} • ${data.version || ''}`,'info');
+  } catch (e) {
+    showToast('Failed to fetch device info', 'error');
+  }
+}
+
+async function pairManual() {
+  const ip = document.getElementById('pair-ip').value.trim();
+  if (!ip) { showToast('Please enter an IP address', 'error'); return; }
+  if (pairedDevices.some(d => (d.ip_address || '').trim() === ip)) {
+    showToast('This device is already paired', 'error');
+    return;
+  }
+  try {
+    const token = localStorage.getItem('access_token');
+    const res = await fetch('/api/cluster/pair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ target_ip: ip })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Pairing failed');
+    document.getElementById('pair-result').innerText = `Paired ${data.device.device_id || ''} at ${ip}`;
+    showToast('Device paired successfully');
+    await loadPaired();
+  } catch (e) {
+    document.getElementById('pair-result').innerText = e.message;
+    showToast(`Pairing failed: ${e.message}`, 'error');
+  }
+}
+
+async function unpair(deviceId) {
+  try {
+    const token = localStorage.getItem('access_token');
+    const res = await fetch(`/api/cluster/devices/${deviceId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.detail || 'Unpair failed');
+    }
+    showToast('Device unpaired');
+    await loadPaired();
+  } catch (e) {
+    showToast(`Unpair failed: ${e.message}`, 'error');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadPaired);
+</script>
+{% endblock %}

@@ -1,0 +1,309 @@
+
+Top-level goals:
+Securely bring up the imaging system in minutes
+Enable users to rapidly configure, monitor, and troubleshoot the imaging system
+Enable integration with VMS and Security Operations (SecOps)
+
+Home Page
+Top bar with any urgent notifications
+CTHz logo at top left of the screen
+The logo should be customizable to support the needs of OEMs and Partners. 
+Example: Replacing our logo with a partner’s logo with a phrase such as “A Cambridge Terahertz Partner” or “A CTHz Partner” would create an OEM brand and protect our IP. 
+Left-hand column with Menus for the various categories. The other larger column displays relevant data. 
+Each menu with sub-menus is indicated with a “+” sign on the left-hand side.
+Help Menu, when clicked, opens a User’s Manual
+User Management
+Login
+Authentication (2FA)
+Password recovery
+SSO
+LDAP Integration
+Role-based access: Owner, Admin, Monitoring
+Device Management
+Certificate
+Device Info
+Serial Number (scan a QR code on the device)
+Name for the THz Imager
+Name for the camera
+Location & Time zone
+Software version
+Hardware version
+Last software update
+Neighborhood/Group Name
+Admin
+Test packet to the target imager. Like a ping, it acts as a heartbeat to the imager. A test packet is sent to the target imager, which then responds to it without any errors. We can also know the connection round-trip latency. We could also return the image from the last calibration. 
+Heartbeat frequency (default 5 min)
+Calibration
+Test object at 2m
+Result observed vs expected to guide the user
+Menu to start and record calibration
+How will the user know if the calibration is correct or not?
+API Get for which the imager returns the calibration image. 
+Single device
+Status
+Last threat object detected at “timestamp” 
+Group
+Devices in the group that together provide 360-degree coverage (assuming 3) at a given screening station
+We should generalize this concept in a future version for any number of imagers in each location. 
+Full station 360-degree monitoring
+View from each imager
+Aggregate image
+All 4 are shown on one screen, customizable by the user
+Network Settings
+WiFi 
+Ethernet
+Usual configuration parameters such as gateway, subnet, mask, DHCP or static address, etc. I recommend customers use a static IP so that monitoring becomes easier. 
+Remote management
+Monitoring
+Basic device info displayed
+Device stats
+Time last threat object detected
+Number of threat objects detected
+Manual review and annotation of scans/objects 
+Classification pie chart
+Confidence Interval (CI) pie chart?
+# false positives? With annotation 
+# false negatives? With annotation
+Notifications/alerts
+Errors (device, network, scan errors, timeouts, etc.)
+Flagged (suspicious or unclear) scans
+Date of last calibration
+Button to change time from UTC to the time zone local to the imager
+Imager Status Dump (for admin user only or special sequence during a debugging session)
+DOS Attack: As a default, the imager should NOT respond to an external Ping command to prevent DOS attacks. 
+Audit log
+Log all activities with UTC timestamp
+Keep stats on various features used (for marketing and debugging)
+Keep stats on scan details, errors, and other performance metrics
+Login record (e.g., login, failed login, external ping, etc.)
+Archive
+Software Management
+Current version
+Software update
+Information on changes in the update
+Going back to a recovery version in “safe mode”
+Policy System
+Basic “If-then-else” policies
+If object = gun, then notify security and stream scan to SecOps
+Simple set of rules with pull-down menus for Conditions and Actions
+Conditions: Object type, error, etc.
+Actions: SMS, email, notification, streaming, informing other imagers, etc.
+Sub-menus for
+Create/Edit a Policy
+Monitor a policy. When a policy is triggered, an audit log is created.
+Summary of active or inactive policies
+Policies that CANNOT be deleted and are always running. E.g., policy triggered when a gun is detected. 
+Default policies are enabled on the system for the detection of guns, knives, and explosives
+Trigger a scan when motion is detected. However, we must always buffer 15 (30) seconds of activity before the trigger. 
+Basic API-based 3rd Party Integration
+Genetec (for example, used by Mayo Clinic)
+Convergint (for example, used by University Hospitals)
+Milestone (for example, used by Kaiser Healthcare)
+Verkada (used by many enterprise customers)
+Biometric integration
+Tracking integration
+Basic API-based CTHz SaaS Integration
+Streaming to a centralized cloud application
+Can leverage the work we do for 3rd party integration and implement best practices in API development. 
+Device API set
+User Auth
+Obtaining a unique device ID
+GET commands
+device-status
+time-last-scan                                  # returns time in UTC
+time-last-threat-detected
+/scans/num-unique-scans            # number of unique scans completed
+/scans/{time}                                  # get multiple scans in the last x min
+/scans/{id}                                       # get a scan
+/ntp/{id}                                          # get NTP time from the device
+/calibration/{id}           # imager returns the result from the last calibration
+POST commands
+/auth/{token}
+scan/settings
+scan
+scans/stream
+config/image-buffer   # recommend 15, 30 sec as options
+PUT commands
+
+
+DELETE commands
+UX
+Generally, follow the MSFT style guidelines as a default for folders, menus, submenus, colors, error messages, and other elements. 
+CTHz color template
+Simple and straightforward
+Responsive design to support desktops, laptops, and mobile devices such as smartphones and tablets
+Localization
+Initial support for English only. 
+Architected to support additional languages.
+
+Summary (TL;DR)
+
+In this document, we provide major requirements for managing a single or a group of System 300 imaging systems. For the MVP, the focus is on the device management of a single imaging system. 
+
+Device management refers to the processes, tools, and practices used to administer, operate, and maintain the deployed CTHz sensors. It involves monitoring network performance, diagnosing issues, configuring devices, managing security, and optimizing resource utilization.
+
+Using this web-based application, users will be able to easily and rapidly configure, monitor, and troubleshoot a System 300. Related documents include:
+MRD collated from the work done by the team as of 7/1/2025
+PRD for the System 300
+https://sourceforge.net/projects/onvifdm/
+
+
+
+While the feature priorities will be targeted towards the MVP, the document captures three phases of the Device Management capabilities to meet customer requirements across various verticals. P0 features highlighted in yellow are mandatory for the MVP. 
+Background
+
+The Device Manager (DM) is critical to offering a “whole product” to our customers. This is the first application used to bring up, configure, monitor, visualize results, and troubleshoot the imaging system. Hence, it will set the tone for our entire solution in terms of usability, features, system integration, and integration with 3rd party applications used in overall Security Operations (SecOps). 
+
+The DM is a web-based application hosted on the CTHz Sensor System 300. 
+
+The overall requirements of the Device Manager can be broken down into the following functional groups.
+
+Usage Model:
+
+
+Connecting to the imager for the FIRST time
+Via Ethernet cable to the imager
+Using the default Wi-Fi network name (e.g., CTHz-Wi-Fi) and password
+
+Turn on the Sensor System 300 and wait for a minute. Using a web browser (Chrome, Edge, Safari, Firefox in that order), type your imager’s default IP address 192.168.1.10 or default Wi-Fi network. When prompted, enter the default login username and password. 
+
+The device will NOT go into a scan mode unless and until the owner/admin account has been created and a new strong password is selected. 
+
+
+
+
+
+Upon login, the user is taken to the HOME page for the device. 
+
+Login, Logout, User Profile
+Add, Del, Edit user profiles
+Username, password
+Temp password and request to change
+Reminders to change 
+Admin
+User Management (Add, Del, Edit), Permissions
+Factory reset
+Reboot
+Local server configuration
+Software Update
+Network Settings
+WiFi 
+Ethernet
+Usual configuration parameters such as gateway, subnet, mask, DHCP or static address, etc. I recommend customers use a static IP so that monitoring becomes easier. 
+Remote management
+Screen sharing (for support, for example)
+
+
+System 300 Menus
+Device Summary
+Start, Stop Scan
+Save
+Calibrate
+Notifications & Alerts
+Audit Log
+Reports, Exports
+Dashboard
+
+
+
+
+The Sensor System 300 can be configured via a web browser interface. 
+
+
+Feature ID
+Description
+Priority
+Comments
+CFG-001
+Configure imager information such as name, location, model number, date installed, date last updated, software version, hardware version, admin info incl login name & password, fps, etc. 
+P0
+Browser-based config for MVP. JSON or file-based approach ok for prototype. This assumes network access. 
+CFG-002
+Browser interface for configuration
+P0
+The user connects using the SSID and password for the imager. For the MVP, this can be a JSON script. 
+CFG-003
+Login screen with Welcome info
+P0
+
+
+CFG-004
+Forgot Password
+P1
+For password recovery
+CFG-005
+Dynamic IP via DHCP (default)
+DHCP On/Off
+P0
+For MVP, not mandatory
+CFG-006
+WiFi Radio On/Off
+P0
+Ability to turn on/off WiFi on the imager
+CFG-007
+Configure WiFi 
+SSID, WPA2/3, Channel, etc.
+Suppress SSID broadcast for enhanced security. Station mode is sufficient but will still have some WiFi configuration. Not ruling out our imagers creating a mesh in the future!
+P0
+Browser form captures all the info. Form has Save and Cancel buttons. 
+CFG-007.1
+GPS information
+P1
+Either through integrated GPS module or through the network information. 
+CFG-008
+Admin configuration
+Username, password
+P0
+Suggestions only.  The config info can be changed and stored on the system in a secure manner. 
+CFG-009
+LAN Configuration (Static IP v4/v6)
+IP Address, Subnet Mask, Default Gateway, Primary & Secondary DNS
+P1
+Suggestion only. Browser access is by default on port 80.
+CFG-010
+Bootup time target: 60 seconds. 
+P1
+Flexible for the MVP
+CFG-011
+Time Zone where the imager is located
+P2
+
+
+Copy approach, for example, used by Google Admin Console.
+Select time zone based on geolocation (if available). 
+CFG-012
+Imager Status/Summary Tab
+Provide full configuration summary info. Hardware type, software version, memory, storage, network info & status, self-test results, etc.
+P0
+
+
+CFG-013
+Local storage server
+name, IP Address, certificate or secure FTP credentials
+P0
+Mutual authentication with the local server prior to storing images and videos.  
+CFG-013.1
+Cloud storage integration for AWS, Azure, GCP
+P1
+Initially, local storage or the device or local server is sufficient. 
+CFG-014
+Heartbeat with local server. Default every 5 min. Configurable from 1 min to 5 min. 
+P1
+Periodic test packet embedding imager info. Not a Ping. Not mandatory for the MVP. 
+CFG-015
+NTP client configuration. Stratum 3 clock source is sufficient. We can use Google NTP server or find one at pool.ntp.org. Default sync time is one week. 604800 seconds
+P0
+Configure NTP client on the imager. The NTP server will be the clock source for system and video timing. Manual config OK for MVP. 
+CFG-016
+Configure optical imager to always capture visible video. 1080P plus Infrared plus night vision camera. 
+P1
+In the MVP, can use a separate video feed to sync time with CTHz synthetic video stream. 
+CFG-016-1
+Configure audio component of the video stream. Initially, targeting just the microphone for one-way audio; not two-way audio
+P1
+In certain situations, the audio provides additional information for forensic analysis or in understanding the real-time intent of any suspicious activities.  (Backup plan is to use the video stream from surveillance cameras.)
+CFG-017
+Configure CTHz 3D parameters such as FOV, ROI, FPS, etc.  
+P0
+1-2 fps may be sufficient for MVP. To be validated. 
+

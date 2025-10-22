@@ -1,0 +1,300 @@
+Executive Summary
+
+The System 300 Device Management (DM) project aims to deliver a robust, web-based application for configuring, monitoring, and managing Cambridge Terahertz (CTHz) System 300 imaging devices. Hosted directly on the device’s Yocto-based environment, the DM will serve as the operational backbone for setup, security, and integration into broader Security Operations (SecOps) workflows.
+The project will be delivered in three phases, with the MVP focusing on rapid, secure station setup, basic policy enforcement, and limited integration. MVP capabilities include user authentication with role-based access, device and station setup, calibration controls, real-time device and station monitoring, multi-device management for 360° coverage, a basic If-Then-Else policy engine with default threat detection rules, and a proof-of-concept integration with Genetec VMS and a biometric hook. To streamline deployment, MVP will incorporate basic device discovery using mDNS/Bonjour for local network detection, paired with manual confirmation for security.
+Phase 1 will expand functionality with advanced security features (2FA, SSO, LDAP), threat analytics and reporting, enhanced policy management, additional VMS integrations, and tracking support. Full inter- and intra-device auto-discovery will be implemented, enabling automated station grouping and manager–sensor handshakes.
+Phase 2 will deliver full orchestration, cloud readiness, and enterprise-grade integration, including advanced policy workflows, ONVIF-compliant VMS support, full biometric/tracking integration, SaaS-based centralized monitoring, multilingual support, advanced remote management, real-time streaming APIs, and enterprise IAM integration.
+
+Functional Requirements & Scope 
+
+MVP Scope
+Goal: Deliver a functional on-device management system for the System 300 platform that supports initial deployment, basic operational control, essential configuration, and proof-of-concept integration with external systems.
+
+Platform & Deployment
+    • Yocto-based build with Python 3.x, FastAPI backend, SQLite storage.
+    • mDNSResponder (Bonjour) for local device discovery (manual pairing).
+    • Secure systemd service configuration.
+Authentication & Setup
+    • JWT-based auth, role-based access (Owner/Admin/Monitor).
+    • First-time setup wizard: system locked until Owner/Admin created and password set.
+Device & Station Management
+    • Device info: model, SW/HW version, location, neighborhood/group name.
+    • Station grouping (default 3 devices per station), CRUD and assignment.
+    • Aggregated station status view.
+    • Manual software update (file upload via UI).
+Discovery & Pairing
+    • Manual discovery via mDNS/Bonjour browse/resolve using CLI wrapper.
+    • Pairing flow and enable/disable discovery setting.
+Sensor Integration
+    • HTTPS communication with sensors.
+    • Scan control (start/stop), calibration trigger, calibration image retrieval.
+    • Time-based scan retrieval (/scans/{time}).
+    • Configure image buffer duration for motion-triggered scans.
+Policy Engine
+    • Basic If-Then-Else logic with default rules for guns/knives/explosives.
+    • Action hooks: UI alerts, Genetec POC call, motion-triggered scan support.
+Integrations
+    • Genetec VMS adapter (single POC integration).
+    • Minimal biometric hook (event POST).
+Configuration (CFG P0 Items)
+    • Imager info, Wi-Fi, LAN, GPS, admin settings, storage (local/cloud), NTP, heartbeat, video/audio, CTHz 3D parameters.
+Monitoring & Alerts
+    • Device/station status API.
+    • Critical error notifications in UI.
+    • Audit log API.
+Security & Observability
+    • HTTPS/TLS, DoS hardening, CSRF protection.
+    • JSON logs, audit trail, log rotation.
+Testing & Sandbox
+    • Unit & integration tests.
+    • Raspberry Pi/simulator environment for mDNS and stub APIs.
+
+Phase 1 Scope
+Goal: Enhance operational efficiency, enable automated updates, improve discovery, and expand policy capabilities for a more robust and maintainable system.
+
+Discovery
+    • Automatic inter-device (within station) and intra-device (sensor ↔ manager) discovery.
+    • Auto-pairing workflows with admin approval.
+Software Update
+    • Automated OTA updates via HTTP(S) with package verification.
+    • Rollback capability.
+Policy Engine
+    • Policy monitoring dashboard.
+    • Composite rules and richer conditions.
+Integrations
+    • Additional VMS platform integrations (beyond Genetec).
+    • Enhanced biometric API integration.
+Monitoring
+    • Real-time device/station status via WebSocket or SSE.
+    • Expanded metrics and health reporting.
+Security
+    • Optional mTLS between manager and sensors.
+    • LDAP/SSO integration.
+Admin Tools
+    • Scheduled scans.
+    • Device firmware version management.
+
+Phase 2 Scope
+Goal: Provide enterprise-level scalability, remote fleet management, and extended capabilities to support large multi-site deployments and advanced analytics.
+Fleet & Cloud Management
+    • Centralized multi-site device management portal.
+    • Cloud sync for configuration, policies, and audit logs.
+Advanced Policy Automation
+    • Integration with external threat intelligence feeds.
+    • AI-assisted rule recommendations.
+Localization & Accessibility
+    • Multi-language UI support.
+    • WCAG accessibility compliance.
+Extended Integrations
+    • ONVIF support for camera interoperability.
+    • Additional third-party analytics platforms.
+Advanced Analytics
+    • Historical data visualizations.
+    • Anomaly detection reports.
+Security & Compliance
+    • Full audit compliance exports.
+    • Role-based granular permission matrix.
+
+Functional Assumptions
+Scope & Prioritization
+    • MVP includes only features marked P0 in the revised PRD (including the CFG table).
+    • P1/P2 items will be delivered in later phases unless otherwise agreed.
+    • MVP includes manual software update; automated OTA updates will be in Phase 1.
+First-Time Setup
+    • System will ship in a locked-down state until an Owner/Admin account is created and a strong password is set.
+    • A first-time setup wizard will be provided via the local web UI to guide through initial network and account configuration.
+Device Discovery & Pairing
+    • MVP discovery is manual using mDNSResponder (dns-sd CLI wrapper from FastAPI).
+    • Devices must be on the same subnet for discovery.
+    • No auto-discovery or auto-pairing in MVP; this is planned for Phase 1.
+Device & Station Management
+    • Each station supports a default configuration of 3 devices.
+    • Device info includes Neighborhood/Group Name, model, SW/HW version, location, and timezone.
+    • Aggregated station status will be available via API and UI.
+Sensor API Integration
+    • Sensor API will be provided by the client with endpoints:
+ /health, /device-info, /scan/start, /scan/stop, /calibrate/start, /calibration/{id}, /status, /scans/{time}, /config/image-buffer.
+    • APIs will be functional and accessible over HTTPS from the manager application.
+    • Motion detection logic runs on the sensor; manager triggers scans and configures buffer duration.
+
+Motion-Triggered Scans
+    • Manager triggers scans on motion detection events from the sensor API.
+    • Pre-buffer duration (15–30 seconds) is configurable via /config/image-buffer.
+Configuration Items (CFG P0)
+    • MVP includes API + UI forms for:
+        ◦ CFG-001 Imager Info
+        ◦ CFG-002 Wi-Fi
+        ◦ CFG-003 LAN
+        ◦ CFG-006 GPS
+        ◦ CFG-007 Admin Settings
+        ◦ CFG-008 Storage (local/cloud)
+        ◦ CFG-012 NTP
+        ◦ CFG-013 Heartbeat Interval
+        ◦ CFG-015 Video/Audio
+        ◦ CFG-017 CTHz 3D Parameters
+    • Configuration changes take effect without requiring a reboot unless specified.
+Policy Engine
+    • MVP policy engine supports If–Then–Else rules (JSONLogic).
+    • Default policies for guns, knives, explosives will be seeded.
+    • Action hooks include UI alerts, Genetec POC event push, and motion-triggered scans.
+Integrations
+    • MVP includes a single POC VMS integration with Genetec.
+    • Minimal biometric hook: HTTP POST to configured endpoint on detection event.
+Monitoring & Alerts
+    • Poll-based status checks for devices/stations.
+    • Critical errors displayed in UI.
+    • Audit log retrieval via API.
+
+Technical Assumptions
+Platform & Runtime
+    • Yocto-based OS image on target hardware.
+    • Python 3.x runtime available with pip modules.
+    • FastAPI backend served by Uvicorn (ASGI).
+    • SQLite used for persistence (migration path to PostgreSQL for future phases).
+Discovery Mechanism
+    • mDNSResponder (Apache 2.0 license) if available in Yocto image. (avoiding LGPL licensing). Otherwise Zeroconf would be preferable.
+    • dns-sd CLI is callable from FastAPI via Python subprocess.
+
+Security
+    • All manager ↔ sensor communication uses HTTPS (TLS 1.2+).
+    • API authentication via shared tokens in MVP; mTLS planned for Phase 1.
+    • Self-signed certificates used for MVP TLS.
+    • Role-based access enforced at API and UI layers.
+UI Framework
+    • Bootstrap + HTMX/Alpine.js for responsive, lightweight UI.
+    • Minimal client-side validation in MVP; extended validation in later phases.
+Software Update
+    • Manual package upload (.tar.gz or similar) via UI in MVP.
+    • Checksum verification optional in MVP.
+    • Update process triggers a service restart.
+    • Automated OTA updates planned for Phase 1.
+Logging & Audit
+    • JSON-structured application logs.
+    • Audit logs for authentication events, device pairings, policy triggers, and admin actions stored in SQLite.
+    • Log rotation managed at OS level.
+Testing & Sandbox
+    • Client will provide simulator or Raspberry Pi device with:
+        ◦ mDNS advertisement
+        ◦ All required API endpoints stubbed.
+    • Integration testing will be performed against this environment before hardware integration.
+Solution Architecture
+Overall Pattern
+    • Device-hosted FastAPI application (ASGI) served by Uvicorn; UI (Bootstrap/HTMX) rendered from the same service.
+    • Clean separation of UI, API/Services, Integration Adapters (Sensor, VMS), and Persistence.
+Deployment & Runtime
+    • Yocto-based image with Python 3.x, packaged as a systemd service (auto-start, restart on failure).
+    • SQLite for configuration, device registry, station topology, policies, and audit.
+    • mDNSResponder (Bonjour) daemon enabled for mDNS/Bonjour
+Discovery & Pairing
+    • MVP: mDNS/Bonjour via mDNS or similar.
+    • Phase 1: Auto-discovery and handshake for inter-device (station) and intra-device (manager-sensor).
+Station & Device Model
+    • Station - logical group (default 3 sensors)
+    • Aggregated status view + per-sensor detail; topology stored in DB for consistent rendering and policy scope.
+Sensor Integration (IPC)
+    • Minimal endpoints: /health, /device-info, /scan/start, /scan/stop, /calibrate/start, /status.
+    • Auth: shared token in MVP; option to upgrade to mTLS in Phase 1.
+Policy Engine
+    • MVP: If–Then–Else evaluator (something lightweight as jsonlogic / rule-engine etc.) with default policies for guns/knives/explosives. This will include motion triggered scans and API triggers.
+    • Policy lifecycle: create (seed defaults) ->  evaluate on events ->  log decision -> trigger actions (UI alert, VMS adapter call).
+    • Phase 1+: richer conditions, composite actions, policy monitoring dashboard.
+VMS Integration (POC: Genetec or similar)
+    • Adapter module wrapping Genetec SDK/REST; config via secure admin page.
+    • Push events/metadata and receive acknowledgments; credentials encrypted at rest.
+Security
+    • HTTPS/TLS everywhere; JWT sessions; passwords via Passlib.
+    • DoS hardening: disable ICMP ping; minimal open ports; role-based access (Owner/Admin/Monitor).
+Observability & Audit
+    • Structured logs (JSON) + SQLite audit tables (UTC): auth, pairing, policy triggers, admin actions.
+    • Log rotation; optional Sentry/remote syslog hooks (Phase 1+).
+Configuration & Updates
+    • Admin APIs for network config 
+    • Software version display in MVP; Phase 1 adds update/rollback with changelog.
+Scalability & Extensibility
+    • Integration adapters (VMS/biometric/tracking) follow a plug-in interface.
+    • DB abstraction via SQLAlchemy for future move to PostgreSQL (cloud/centralized).
+Testing & Sandbox - Simulator/Raspberry Pi advertises mDNS (mDNSResponder) and exposes stub sensor APIs.
+
+Configuration items as defined in the PRD 
+
+
+Feature ID	Description	Priority	Comments
+CFG-001	Configure imager information such as name, location, model number, date installed, date last updated, software version, hardware version, admin info incl login name & password, fps, etc. 	P0	Browser-based config for MVP. JSON or file-based approach ok for prototype. This assumes network access. 
+CFG-002	Browser interface for configuration	P0	The user connects using the SSID and password for the imager. For the MVP, this can be a JSON script. 
+CFG-003	Login screen with Welcome info	P0	
+CFG-004	Forgot Password	P1	For password recovery
+CFG-005	Dynamic IP via DHCP (default)
+DHCP On/Off	P0	For MVP, not mandatory
+CFG-006	WiFi Radio On/Off	P0	Ability to turn on/off WiFi on the imager
+CFG-007	Configure WiFi 
+SSID, WPA2/3, Channel, etc.
+Suppress SSID broadcast for enhanced security. Station mode is sufficient but will still have some WiFi configuration. Not ruling out our imagers creating a mesh in the future!	P0	Browser form captures all the info. Form has Save and Cancel buttons. 
+CFG-007.1	GPS information	P1	Either through integrated GPS module or through the network information. 
+CFG-008	Admin configuration
+Username, password	P0	Suggestions only.  The config info can be changed and stored on the system in a secure manner. 
+CFG-009	LAN Configuration (Static IP v4/v6)
+IP Address, Subnet Mask, Default Gateway, Primary & Secondary DNS	P1	Suggestion only. Browser access is by default on port 80.
+CFG-010	Bootup time target: 60 seconds. 	P1	Flexible for the MVP
+CFG-011	Time Zone where the imager is located	P2
+	Copy approach, for example, used by Google Admin Console.
+Select time zone based on geolocation (if available). 
+CFG-012	Imager Status/Summary Tab
+Provide full configuration summary info. Hardware type, software version, memory, storage, network info & status, self-test results, etc.	P0	
+CFG-013	Local storage server
+name, IP Address, certificate or secure FTP credentials	P0	Mutual authentication with the local server prior to storing images and videos.  
+CFG-013.1	Cloud storage integration for AWS, Azure, GCP	P1	Initially, local storage or the device or local server is sufficient. 
+CFG-014	Heartbeat with local server. Default every 5 min. Configurable from 1 min to 5 min. 	P1	Periodic test packet embedding imager info. Not a Ping. Not mandatory for the MVP. 
+CFG-015	NTP client configuration. Stratum 3 clock source is sufficient. We can use Google NTP server or find one at pool.ntp.org. Default sync time is one week. 604800 seconds	P0	Configure NTP client on the imager. The NTP server will be the clock source for system and video timing. Manual config OK for MVP. 
+CFG-016	Configure optical imager to always capture visible video. 1080P plus Infrared plus night vision camera. 	P1	In the MVP, can use a separate video feed to sync time with CTHz synthetic video stream. 
+CFG-016-1	Configure audio component of the video stream. Initially, targeting just the microphone for one-way audio; not two-way audio	P1	In certain situations, the audio provides additional information for forensic analysis or in understanding the real-time intent of any suspicious activities.  (Backup plan is to use the video stream from surveillance cameras.)
+CFG-017	Configure CTHz 3D parameters such as FOV, ROI, FPS, etc.  	P0	1-2 fps may be sufficient for MVP. To be validated. 
+
+
+
+Work break down
+
+ID	Functional Group	Technical Task	Description / Deliverable
+1.1	Platform & Deployment	Yocto Integration	Create Yocto recipes for Python 3.x, FastAPI, SQLite, mDNSResponder, wpa_supplicant
+1.2	Platform & Deployment	System Services	Configure cthz-manager.service and enable mdnsresponder.service in systemd
+1.3	Platform & Deployment	Env & FS Setup	Secure env vars, folder structure for configs/logs/db, permissions
+2.1	Core Backend	API Framework Setup	Initialize FastAPI project, add middleware (logging, error handling, auth)
+2.2	Core Backend	DB Schema	Define SQLite schema for users, roles, devices, stations, policies, audit_logs, discovery_cache
+2.3	Core Backend	ORM Integration	Implement SQLModel/SQLAlchemy models with migration readiness
+3.1	Auth & Roles	JWT Auth	Implement JWT-based sessions and token refresh
+3.2	Auth & Roles	Password Security	Implement Passlib password hashing
+3.3	Auth & Roles	RBAC	Role-based access control for Owner, Admin, Monitor
+3.4	Auth & Roles	User Mgmt API	Admin endpoints for CRUD on users and roles
+3.5	Auth & Roles	First-Time Setup Flow	Lockdown until Owner/Admin created & strong password set; setup wizard
+4.1	Discovery & Pairing	CLI Wrapper	Implement dns-sd browse/resolve calls via Python subprocess
+4.2	Discovery & Pairing	Discovery APIs	GET /api/discovery/scan, POST /api/discovery/resolve, POST /api/discovery/pair
+4.3	Discovery & Pairing	UI Flow	“Discover → Pair” front-end pages/forms
+5.1	Device & Station Mgmt	Device Info	API & UI for name, model, SW/HW version, location/timezone, neighborhood/group name
+5.2	Device & Station Mgmt	Station Model	Create station grouping logic (3 devices default)
+5.3	Device & Station Mgmt	Station APIs	CRUD for stations, assign/remove devices
+5.4	Device & Station Mgmt	Aggregated Status	API for station status (multi-device view)
+5.5	Software Management	Manual Software Update	Admin UI & API to upload package, validate, trigger update
+6.1	Sensor Integration	API Client	Implement httpx client for sensor APIs over HTTPS
+6.2	Sensor Integration	Control APIs	Start/stop scan, calibration trigger, get calibration image (/calibration/{id})
+6.3	Sensor Integration	Status APIs	Health, last threat detected, /scans/{time} support
+6.4	Sensor Integration	Image Buffer Config	API to set motion-trigger pre-buffer duration
+7.1	Policy Engine	Core Logic	JSONLogic evaluator for If-Then-Else
+7.2	Policy Engine	Seed Policies	Default rules for guns, knives, explosives
+7.3	Policy Engine	Action Hooks	Trigger UI alerts, Genetec POC calls, motion-triggered scan
+8.1	VMS Integration	Genetec Adapter	Wrap Genetec SDK/REST for event push
+8.2	Biometric Hook	Minimal API Call	HTTP POST to biometric endpoint on event
+9.1	Monitoring & Alerts	Device Status API	Return current device/station status
+9.2	Monitoring & Alerts	Error Notifications	Critical error alerts in UI
+9.3	Monitoring & Alerts	Audit API	Retrieve audit logs
+10.1	UI/Frontend	Base Layout	Bootstrap + HTMX/Vue layout with responsive design
+10.2	UI/Frontend	Navigation	Dashboard, Discovery, Policy Mgmt, Alerts, Settings
+10.3	UI/Frontend	Forms/Views	Config forms for P0 CFG items (Imager Info, Wi-Fi, LAN, GPS, Admin, Storage, NTP, Heartbeat, Video/Audio, CTHz 3D params)
+11.1	Security	TLS Setup	Self-signed cert generation and HTTPS config
+11.2	Security	DoS Hardening	Disable ping, firewall rules
+11.3	Security	CSRF/Secure Cookies	Configure session security in FastAPI
+12.1	Observability & Audit	Logging	JSON logs, rotation policy
+12.2	Observability & Audit	Audit Storage	Log auth events, pairing, policy triggers
+13.1	Testing & Sandbox	Unit Tests	API, policy engine, mDNS parsing tests
+13.2	Testing & Sandbox	Integration Tests	Simulated sensor API + Genetec mock
+13.3	Testing & Sandbox	Sandbox Env	Raspberry Pi/simulator with mDNS + stub APIs
+
+

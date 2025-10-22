@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs - CT3D System{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Audit Logs</h1>
+    <p>Track all user actions and system events</p>
+</div>
+
+<div class="card">
+    <div style="padding: 16px; display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+        <input id="audit-search" class="input" placeholder="Search (user, action, ua)" style="min-width:240px;" />
+        <input id="audit-user" class="input" placeholder="Filter by user" />
+        <input id="audit-action" class="input" placeholder="Filter by action" />
+        <button class="btn btn-primary" onclick="loadAuditLogs()">Search</button>
+    </div>
+    <div style="overflow:auto;">
+        <table class="table" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Time</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>IP</th>
+                    <th>User Agent</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="audit-tbody">
+                <tr><td colspan="7" style="text-align:center; color:#718096; padding:24px;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+async function loadAuditLogs() {
+    try {
+        const q = document.getElementById('audit-search').value.trim();
+        const user = document.getElementById('audit-user').value.trim();
+        const action = document.getElementById('audit-action').value.trim();
+        const params = new URLSearchParams();
+        if (q) params.set('q', q);
+        if (user) params.set('user', user);
+        if (action) params.set('action', action);
+        const token = localStorage.getItem('access_token');
+        const res = await fetch(`/api/monitoring/logs?${params.toString()}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const tbody = document.getElementById('audit-tbody');
+        tbody.innerHTML = '';
+        if (!data.items || data.items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#718096; padding:24px;">No logs</td></tr>';
+            return;
+        }
+        for (const it of data.items) {
+            const tr = document.createElement('tr');
+            const detail = it.details ? `<pre style="white-space:pre-wrap;max-width:420px;max-height:160px;overflow:auto;background:#f8fafc;padding:8px;border-radius:6px;">${escapeHtml(JSON.stringify(it.details))}</pre>` : '';
+            tr.innerHTML = `
+                <td>${it.id}</td>
+                <td>${new Date(it.timestamp).toLocaleString()}</td>
+                <td>${it.user || ''}</td>
+                <td>${it.action}</td>
+                <td>${it.ip_address || ''}</td>
+                <td>${(it.user_agent || '').slice(0,64)}</td>
+                <td>${detail}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+    } catch (e) {
+        console.error('loadAuditLogs error', e);
+        const tbody = document.getElementById('audit-tbody');
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#E53E3E; padding:24px;">Failed to load logs</td></tr>';
+    }
+}
+
+function escapeHtml(str) {
+    return str.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+document.addEventListener('DOMContentLoaded', loadAuditLogs);
+</script>
+{% endblock %}
